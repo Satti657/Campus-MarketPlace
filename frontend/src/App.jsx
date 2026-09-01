@@ -1,5 +1,7 @@
+
 import { useState } from "react";
 import API from "./api";
+import "./App.css";
 
 function App() {
   const [email, setEmail] = useState("");
@@ -13,7 +15,7 @@ function App() {
     try {
       const response = await API.post("/login", {
         email,
-        password
+        password,
       });
 
       localStorage.setItem("token", response.data.token);
@@ -42,56 +44,195 @@ function App() {
   };
 
   return (
-    <div>
-      <h1>Campus Marketplace</h1>
+    <div className="app">
 
-      <h2>Login</h2>
+      {/* Navbar */}
+      <nav className="navbar">
+        <div className="logo">
+          Campus<span>Marketplace</span>
+        </div>
 
-      <form onSubmit={handleLogin}>
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
+        <div className="nav-links">
+          <a href="#">Home</a>
+          <a href="#">Marketplace</a>
+          <a href="#">About</a>
+        </div>
 
-        <br />
-        <br />
-
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-
-        <br />
-        <br />
-
-        <button type="submit">
+        <button className="nav-login">
           Login
         </button>
-      </form>
+      </nav>
 
-      <p>{message}</p>
+      
+      <main className="main-container">
 
-      <hr />
+        {/* Left Side */}
+        <section className="hero-section">
+          <p className="small-heading">
+            🎓 UNIVERSITY MARKETPLACE
+          </p>
 
-      <button onClick={getProfile}>
-        Get My Profile
-      </button>
+          <h1>
+            Buy, Sell & Discover
+            <span> Campus Products</span>
+          </h1>
 
+          <p className="hero-text">
+            A simple marketplace for university students.
+            Find books, electronics and other useful items
+            from your campus community.
+          </p>
+
+          <div className="hero-features">
+            <div>
+              <strong>📚</strong>
+              <p>Books</p>
+            </div>
+
+            <div>
+              <strong>💻</strong>
+              <p>Electronics</p>
+            </div>
+
+            <div>
+              <strong>🛍️</strong>
+              <p>Campus Items</p>
+            </div>
+          </div>
+        </section>
+
+      
+        <section className="login-card">
+
+          <div className="login-icon">
+            👤
+          </div>
+
+          <h2>Welcome Back</h2>
+
+          <p className="login-subtitle">
+            Login to access your Campus Marketplace account
+          </p>
+
+          <form onSubmit={handleLogin}>
+
+            <label>Email Address</label>
+
+            <input
+              type="email"
+              placeholder="Enter your email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+
+            <label>Password</label>
+
+            <input
+              type="password"
+              placeholder="Enter your password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+
+            <button
+              type="submit"
+              className="login-button"
+            >
+              Login
+            </button>
+
+          </form>
+
+          {message && (
+            <div
+              className={
+                message.includes("successful")
+                  ? "message success"
+                  : "message error"
+              }
+            >
+              {message}
+            </div>
+          )}
+
+          <div className="divider">
+            <span>SECURE LOGIN</span>
+          </div>
+
+          <p className="security-text">
+            🔒 Your password is securely protected.
+          </p>
+
+        </section>
+
+      </main>
+
+      
       {profile && (
-        <div>
-          <h2>My Profile</h2>
+        <section className="profile-section">
 
-          <p>ID: {profile.id}</p>
-          <p>Name: {profile.name}</p>
-          <p>Email: {profile.email}</p>
-        </div>
+          <div className="profile-card">
+
+            <div className="profile-header">
+              <div className="profile-avatar">
+                {profile.name.charAt(0).toUpperCase()}
+              </div>
+
+              <div>
+                <p className="profile-label">
+                  MY ACCOUNT
+                </p>
+
+                <h2>{profile.name}</h2>
+              </div>
+            </div>
+
+            <div className="profile-info">
+
+              <div className="info-item">
+                <span>ID</span>
+                <strong>{profile.id}</strong>
+              </div>
+
+              <div className="info-item">
+                <span>Name</span>
+                <strong>{profile.name}</strong>
+              </div>
+
+              <div className="info-item">
+                <span>Email</span>
+                <strong>{profile.email}</strong>
+              </div>
+
+            </div>
+
+          </div>
+
+        </section>
       )}
+
+      
+      <div className="profile-button-container">
+        <button
+          onClick={getProfile}
+          className="profile-button"
+        >
+          🔐 Get My Profile
+        </button>
+      </div>
+
+      {/* Footer */}
+      <footer>
+        <p>
+          © 2026 Campus Marketplace · Built for Students
+        </p>
+      </footer>
+
     </div>
   );
 }
 
 export default App;
+
