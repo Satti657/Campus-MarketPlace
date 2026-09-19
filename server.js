@@ -1,320 +1,401 @@
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
-const pool = require('./db');
-const authMiddleware = require('./middleware/authMiddleware');
+const express = require("express");
+const cors = require("cors");
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
+const { Pool } = require("pg");
+require("dotenv").config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+const authMiddleware = require("./authMiddleware");
 
-app.use(express.json());
 app.use(cors());
+app.use(express.json());
 
-
-app.get('/', (req, res) => {
-  res.json({ message: 'Hello World! Campus Marketplace API is running.' });
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
 });
 
+// =========================
+// HOME
+// =========================
 
-app.get('/listings', async (req, res) => {
+app.get("/", (req, res) => {
+  res.json({
+    message: "Campus Marketplace API is running",
+  });
+});
+
+// =========================
+// GET ALL LISTINGS
+// WITH SELLER INFORMATION
+// =========================
+
+app.get("/listings", async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM listings ORDER BY created_at DESC');
+    const result = await pool.query(
+      `SELECT
+        listings.id,
+        listings.user_id,
+        listings.title,
+        listings.description,
+        listings.price,
+        listings.category,
+        listings.image_url,
+        users.name AS seller_name,
+        users.email AS seller_email
+       FROM listings
+       JOIN users
+         ON listings.user_id = users.id
+       ORDER BY listings.id DESC`
+    );
+
     res.json(result.rows);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({
+      error: err.message,
+    });
   }
 });
 
+// =========================
+// GET SINGLE LISTING
+// WITH SELLER INFORMATION
+// =========================
 
-app.get('/listings/:id', async (req, res) => {
+app.get("/listings/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const result = await pool.query('SELECT * FROM listings WHERE id = $1', [id]);
+
+    const result = await pool.query(
+      `SELECT
+        listings.id,
+        listings.user_id,
+        listings.title,
+        listings.description,
+        listings.price,
+        listings.category,
+        listings.image_url,
+        users.name AS seller_name,
+        users.email AS seller_email
+       FROM listings
+       JOIN users
+         ON listings.user_id = users.id
+       WHERE listings.id = $1`,
+      [id]
+    );
+
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Listing not found' });
+      return res.status(404).json({
+        error: "Listing not found",
+      });
     }
+
     res.json(result.rows[0]);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({
+      error: err.message,
+    });
   }
 });
 
+// =========================
+// CREATE LISTING
+// PROTECTED
+// =========================
 
-app.post('/listings', authMiddleware, async (req, res) => {
+app.post("/listings", authMiddleware, async (req, res) => {
   try {
-    const { title, description, price, category, image_url } = req.body;
-const user_id = req.user.id;
-   
-   if (!title || !category) {
-  return res.status(400).json({
-    error: 'Title and category are required'
-  });
-}
+    const {
+      title,
+      description,
+      price,
+      category,
+      image_url,
+    } = req.body;
 
     const result = await pool.query(
-      `INSERT INTO listings (user_id, title, description, price, category, image_url)
+      `INSERT INTO listings
+        (user_id, title, description, price, category, image_url)
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
-      [user_id, title, description || null, price ?? 0, category, image_url || null]
+      [
+        req.user.id,
+        title,
+        description,
+        price,
+        category,
+        image_url || null,
+      ]
     );
 
     res.status(201).json(result.rows[0]);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({
+      error: err.message,
+    });
   }
 });
 
+// =========================
+// UPDATE LISTING
+// PROTECTED + OWNER ONLY
+// =========================
 
-app.put('/listings/:id', authMiddleware, async (req, res) => {
+app.put("/listings/:id", authMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, description, price, category, image_url } = req.body;
 
-    // Find the listing
-    const existing = await pool.query(
-      'SELECT * FROM listings WHERE id = $1',
+    const {
+      title,
+      description,
+      price,
+      category,
+      image_url,
+    } = req.body;
+
+    const existingListing = await pool.query(
+      "SELECT * FROM listings WHERE id = $1",
       [id]
     );
 
-    if (existing.rows.length === 0) {
+    if (existingListing.rows.length === 0) {
       return res.status(404).json({
-        error: 'Listing not found'
+        error: "Listing not found",
       });
     }
 
-    // Check ownership
-    if (existing.rows[0].user_id !== req.user.id) {
+    if (existingListing.rows[0].user_id !== req.user.id) {
       return res.status(403).json({
-        error: 'You are not authorized to update this listing'
+        error: "You are not authorized to update this listing",
       });
     }
 
-    // Update listing
     const result = await pool.query(
       `UPDATE listings
-       SET title = $1,
-           description = $2,
-           price = $3,
-           category = $4,
-           image_url = $5
+       SET
+         title = $1,
+         description = $2,
+         price = $3,
+         category = $4,
+         image_url = $5
        WHERE id = $6
        RETURNING *`,
       [
-        title ?? existing.rows[0].title,
-        description ?? existing.rows[0].description,
-        price ?? existing.rows[0].price,
-        category ?? existing.rows[0].category,
-        image_url ?? existing.rows[0].image_url,
-        id
+        title,
+        description,
+        price,
+        category,
+        image_url || null,
+        id,
       ]
     );
 
     res.json(result.rows[0]);
-
   } catch (err) {
-    console.error('Update listing error:', err);
-
     res.status(500).json({
-      error: err.message
+      error: err.message,
     });
   }
 });
 
+// =========================
+// DELETE LISTING
+// PROTECTED + OWNER ONLY
+// =========================
 
-app.delete('/listings/:id', authMiddleware, async (req, res) => {
+app.delete("/listings/:id", authMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Find the listing
-    const existing = await pool.query(
-      'SELECT * FROM listings WHERE id = $1',
+    const existingListing = await pool.query(
+      "SELECT * FROM listings WHERE id = $1",
       [id]
     );
 
-    if (existing.rows.length === 0) {
+    if (existingListing.rows.length === 0) {
       return res.status(404).json({
-        error: 'Listing not found'
+        error: "Listing not found",
       });
     }
 
-    // Check ownership
-    if (existing.rows[0].user_id !== req.user.id) {
+    if (existingListing.rows[0].user_id !== req.user.id) {
       return res.status(403).json({
-        error: 'You are not authorized to delete this listing'
+        error: "You are not authorized to delete this listing",
       });
     }
 
-    // Delete listing
     const result = await pool.query(
-      'DELETE FROM listings WHERE id = $1 RETURNING *',
+      "DELETE FROM listings WHERE id = $1 RETURNING *",
       [id]
     );
 
     res.json({
-      message: 'Listing deleted successfully',
-      deleted: result.rows[0]
+      message: "Listing deleted successfully",
+      listing: result.rows[0],
     });
-
   } catch (err) {
-    console.error('Delete listing error:', err);
-
     res.status(500).json({
-      error: err.message
+      error: err.message,
     });
   }
 });
 
+// =========================
+// SIGNUP
+// =========================
 
-app.post('/signup', async (req, res) => {
-    try {
-        const { name, email, password } = req.body;
+app.post("/signup", async (req, res) => {
+  try {
+    const {
+      name,
+      email,
+      password,
+    } = req.body;
 
-        if (!name || !email || !password) {
-            return res.status(400).json({
-                error: 'Name, email and password are required'
-            });
-        }
+    const existingUser = await pool.query(
+      "SELECT id FROM users WHERE email = $1",
+      [email]
+    );
 
-        if (password.length < 6) {
-            return res.status(400).json({
-                error: 'Password must be at least 6 characters'
-            });
-        }
+    if (existingUser.rows.length > 0) {
+      return res.status(400).json({
+        error: "Email already registered",
+      });
+    }
 
-        const existingUser = await pool.query(
-            'SELECT id FROM users WHERE email = $1',
-            [email]
-        );
-
-        if (existingUser.rows.length > 0) {
-            return res.status(409).json({
-                error: 'Email already registered'
-            });
-        }
-
-        const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash = await bcrypt.hash(
+      password,
+      10
+    );
 
     const result = await pool.query(
-    `INSERT INTO users (name, email, password_hash)
-     VALUES ($1, $2, $3)
-     RETURNING id, name, email`,
-    [name, email, passwordHash]
-);
+      `INSERT INTO users
+        (name, email, password)
+       VALUES ($1, $2, $3)
+       RETURNING id, name, email`,
+      [
+        name,
+        email,
+        passwordHash,
+      ]
+    );
 
-        res.status(201).json({
-            message: 'User registered successfully',
-            user: result.rows[0]
-        });
-
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({
-            error: 'Server error'
-        });
-    }
+    res.status(201).json({
+      message: "User registered successfully",
+      user: result.rows[0],
+    });
+  } catch (err) {
+    res.status(500).json({
+      error: err.message,
+    });
+  }
 });
 
+// =========================
+// LOGIN
+// JWT GENERATION
+// =========================
 
+app.post("/login", async (req, res) => {
+  try {
+    const {
+      email,
+      password,
+    } = req.body;
 
-app.post('/login', async (req, res) => {
-    try {
-        const { email, password } = req.body;
+    const result = await pool.query(
+      `SELECT
+        id,
+        name,
+        email,
+        password
+       FROM users
+       WHERE email = $1`,
+      [email]
+    );
 
-        // Check required fields
-        if (!email || !password) {
-            return res.status(400).json({
-                error: 'Email and password are required'
-            });
-        }
-
-        // Find user
-        const result = await pool.query(
-            'SELECT id, name, email, password_hash FROM users WHERE email = $1',
-            [email]
-        );
-
-        if (result.rows.length === 0) {
-            return res.status(401).json({
-                error: 'Invalid email or password'
-            });
-        }
-
-        const user = result.rows[0];
-
-        // Compare password with bcrypt hash
-        const isMatch = await bcrypt.compare(password, user.password_hash);
-
-        if (!isMatch) {
-            return res.status(401).json({
-                error: 'Invalid email or password'
-            });
-        }
-
-             const token = jwt.sign(
-    {
-        id: user.id,
-        email: user.email
-    },
-    process.env.JWT_SECRET,
-    {
-        expiresIn: '10m'
+    if (result.rows.length === 0) {
+      return res.status(401).json({
+        error: "Invalid email or password",
+      });
     }
-);
 
-        // Successful login
-       res.json({
-    message: 'Login successful',
-    token,
-    user: {
+    const user = result.rows[0];
+
+    const isMatch = await bcrypt.compare(
+      password,
+      user.password
+    );
+
+    if (!isMatch) {
+      return res.status(401).json({
+        error: "Invalid email or password",
+      });
+    }
+
+    const token = jwt.sign(
+      {
+        id: user.id,
+        email: user.email,
+      },
+      process.env.JWT_SECRET,
+      {
+        expiresIn: "10m",
+      }
+    );
+
+    res.json({
+      message: "Login successful",
+      token,
+      user: {
         id: user.id,
         name: user.name,
-        email: user.email
-    }
+        email: user.email,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({
+      error: err.message,
+    });
+  }
 });
 
-   
+// =========================
+// PROFILE
+// PROTECTED
+// =========================
 
-    } catch (err) {
-        console.error('Login error:', err);
+app.get("/profile", authMiddleware, async (req, res) => {
+  try {
+    const result = await pool.query(
+      "SELECT id, name, email FROM users WHERE id = $1",
+      [req.user.id]
+    );
 
-        res.status(500).json({
-            error: err.message
-        });
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        error: "User not found",
+      });
     }
+
+    res.json({
+      user: result.rows[0],
+    });
+  } catch (err) {
+    res.status(500).json({
+      error: err.message,
+    });
+  }
 });
 
-app.get('/profile', authMiddleware, async (req, res) => {
-    try {
-        const result = await pool.query(
-            'SELECT id, name, email FROM users WHERE id = $1',
-            [req.user.id]
-        );
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({
-                error: 'User not found'
-            });
-        }
-
-        res.json({
-            message: 'Protected profile accessed successfully',
-            user: result.rows[0]
-        });
-
-    } catch (err) {
-        console.error('Profile error:', err);
-
-        res.status(500).json({
-            error: 'Server error'
-        });
-    }
-});
-
-
+// =========================
+// START SERVER
+// =========================
 
 app.listen(PORT, () => {
-  console.log(`Campus Marketplace server running on http://localhost:${PORT}`);
+  console.log(
+    `Campus Marketplace server running on http://localhost:${PORT}`
+  );
 });

@@ -1,6 +1,7 @@
+import { useEffect, useState } from "react";
 
-import { useState } from "react";
 import API from "./api";
+
 import "./App.css";
 
 function App() {
@@ -8,6 +9,29 @@ function App() {
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const [profile, setProfile] = useState(null);
+
+  const [listings, setListings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [listingsError, setListingsError] = useState("");
+
+  const [selectedListing, setSelectedListing] = useState(null);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+  const [detailsError, setDetailsError] = useState("");
+
+  useEffect(() => {
+    const fetchListings = async () => {
+      try {
+        const response = await API.get("/listings");
+        setListings(response.data);
+      } catch (error) {
+        setListingsError("Failed to load listings");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchListings();
+  }, []);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -35,12 +59,45 @@ function App() {
       const response = await API.get("/profile");
 
       setProfile(response.data.user);
+
       setMessage("Protected profile accessed successfully");
     } catch (error) {
       setMessage(
         error.response?.data?.error || "Profile access failed"
       );
     }
+  };
+
+  const viewListing = async (id) => {
+    setDetailsLoading(true);
+    setDetailsError("");
+    setSelectedListing(null);
+
+    try {
+      const response = await API.get(`/listings/${id}`);
+
+      setSelectedListing(response.data);
+    } catch (error) {
+      setDetailsError(
+        error.response?.data?.error ||
+          "Failed to load listing details"
+      );
+    } finally {
+      setDetailsLoading(false);
+    }
+  };
+
+  const backToListings = () => {
+    setSelectedListing(null);
+    setDetailsError("");
+
+    setTimeout(() => {
+      document
+        .getElementById("marketplace")
+        ?.scrollIntoView({
+          behavior: "smooth",
+        });
+    }, 0);
   };
 
   return (
@@ -53,9 +110,29 @@ function App() {
         </div>
 
         <div className="nav-links">
-          <a href="#">Home</a>
-          <a href="#">Marketplace</a>
-          <a href="#">About</a>
+          <a
+            href="#"
+            onClick={() => {
+              setSelectedListing(null);
+              setDetailsError("");
+            }}
+          >
+            Home
+          </a>
+
+          <a
+            href="#marketplace"
+            onClick={() => {
+              setSelectedListing(null);
+              setDetailsError("");
+            }}
+          >
+            Marketplace
+          </a>
+
+          <a href="#">
+            About
+          </a>
         </div>
 
         <button className="nav-login">
@@ -63,10 +140,9 @@ function App() {
         </button>
       </nav>
 
-      
       <main className="main-container">
 
-        {/* Left Side */}
+        {/* Hero Section */}
         <section className="hero-section">
           <p className="small-heading">
             🎓 UNIVERSITY MARKETPLACE
@@ -101,9 +177,8 @@ function App() {
           </div>
         </section>
 
-      
+        {/* Login Card */}
         <section className="login-card">
-
           <div className="login-icon">
             👤
           </div>
@@ -115,7 +190,6 @@ function App() {
           </p>
 
           <form onSubmit={handleLogin}>
-
             <label>Email Address</label>
 
             <input
@@ -142,7 +216,6 @@ function App() {
             >
               Login
             </button>
-
           </form>
 
           {message && (
@@ -164,20 +237,234 @@ function App() {
           <p className="security-text">
             🔒 Your password is securely protected.
           </p>
-
         </section>
+
+        {/* Listing Details */}
+        {selectedListing ? (
+          <section className="listing-details-section">
+
+            <button
+              className="back-button"
+              onClick={backToListings}
+            >
+              ← Back to Listings
+            </button>
+
+            <div className="listing-details-card">
+
+              <div className="details-image">
+                {selectedListing.image_url ? (
+                  <img
+                    src={selectedListing.image_url}
+                    alt={selectedListing.title}
+                  />
+                ) : (
+                  <span>
+                    📷 No Photo Available
+                  </span>
+                )}
+              </div>
+
+              <div className="details-content">
+
+                <p className="small-heading">
+                  LISTING DETAILS
+                </p>
+
+                <h2>
+                  {selectedListing.title}
+                </h2>
+
+                <p className="details-price">
+                  Rs. {selectedListing.price}
+                </p>
+
+                <p className="details-category">
+                  {selectedListing.category}
+                </p>
+
+                <div className="details-divider"></div>
+
+                <h3>
+                  Description
+                </h3>
+
+                <p className="details-description">
+                  {selectedListing.description ||
+                    "No description provided for this listing."}
+                </p>
+
+                <div className="seller-card">
+
+                  <h3>
+                    Seller Information
+                  </h3>
+
+                  <div className="seller-info">
+
+                    <div className="seller-avatar">
+                      {selectedListing.seller_name
+                        ?.charAt(0)
+                        .toUpperCase()}
+                    </div>
+
+                    <div>
+                      <p className="seller-name">
+                        {selectedListing.seller_name}
+                      </p>
+
+                      <p className="seller-email">
+                        {selectedListing.seller_email}
+                      </p>
+                    </div>
+
+                  </div>
+
+                  {/* Contact Seller */}
+                  <a
+                    className="contact-seller-button"
+                    href={`mailto:${selectedListing.seller_email}?subject=Interested in ${encodeURIComponent(
+                      selectedListing.title
+                    )}`}
+                  >
+                    ✉️ Contact Seller
+                  </a>
+
+                </div>
+
+              </div>
+
+            </div>
+
+          </section>
+        ) : (
+
+          /* Listings Section */
+          <section
+            className="listings-section"
+            id="marketplace"
+          >
+
+            <div className="listings-header">
+
+              <p className="small-heading">
+                CAMPUS MARKETPLACE
+              </p>
+
+              <h2>
+                Latest Listings
+              </h2>
+
+              <p>
+                Discover items available from your campus community.
+              </p>
+
+            </div>
+
+            {/* Loading */}
+            {loading && (
+              <p className="listing-status">
+                Loading listings...
+              </p>
+            )}
+
+            {/* Error */}
+            {listingsError && (
+              <p className="listing-error">
+                {listingsError}
+              </p>
+            )}
+
+            {/* Empty */}
+            {!loading &&
+              !listingsError &&
+              listings.length === 0 && (
+                <p className="listing-status">
+                  No listings available.
+                </p>
+              )}
+
+            {/* Listings */}
+            {!loading &&
+              !listingsError &&
+              listings.length > 0 && (
+
+                <div className="listings-grid">
+
+                  {listings.map((listing) => (
+
+                    <div
+                      className="listing-card"
+                      key={listing.id}
+                      onClick={() => viewListing(listing.id)}
+                    >
+
+                      <div className="listing-image">
+
+                        {listing.image_url ? (
+                          <img
+                            src={listing.image_url}
+                            alt={listing.title}
+                          />
+                        ) : (
+                          <span>
+                            📷 No Photo
+                          </span>
+                        )}
+
+                      </div>
+
+                      <div className="listing-content">
+
+                        <h3>
+                          {listing.title}
+                        </h3>
+
+                        <p className="listing-price">
+                          Rs. {listing.price}
+                        </p>
+
+                        <p className="listing-category">
+                          {listing.category}
+                        </p>
+
+                        <button
+                          className="view-details-button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            viewListing(listing.id);
+                          }}
+                        >
+                          View Details →
+                        </button>
+
+                      </div>
+
+                    </div>
+
+                  ))}
+
+                </div>
+
+              )}
+
+          </section>
+        )}
 
       </main>
 
-      
+      {/* Profile Section */}
       {profile && (
         <section className="profile-section">
 
           <div className="profile-card">
 
             <div className="profile-header">
+
               <div className="profile-avatar">
-                {profile.name.charAt(0).toUpperCase()}
+                {profile.name
+                  .charAt(0)
+                  .toUpperCase()}
               </div>
 
               <div>
@@ -185,8 +472,11 @@ function App() {
                   MY ACCOUNT
                 </p>
 
-                <h2>{profile.name}</h2>
+                <h2>
+                  {profile.name}
+                </h2>
               </div>
+
             </div>
 
             <div className="profile-info">
@@ -213,14 +503,29 @@ function App() {
         </section>
       )}
 
-      
+      {/* Details Loading/Error */}
+      {detailsLoading && (
+        <p className="listing-status">
+          Loading listing details...
+        </p>
+      )}
+
+      {detailsError && (
+        <p className="listing-error">
+          {detailsError}
+        </p>
+      )}
+
+      {/* Profile Button */}
       <div className="profile-button-container">
+
         <button
           onClick={getProfile}
           className="profile-button"
         >
           🔐 Get My Profile
         </button>
+
       </div>
 
       {/* Footer */}
@@ -235,4 +540,3 @@ function App() {
 }
 
 export default App;
-
