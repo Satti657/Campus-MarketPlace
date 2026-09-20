@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import API from "../api";
@@ -11,7 +12,10 @@ function Home() {
 
   const handleLogout = () => {
     localStorage.removeItem("token");
+    localStorage.removeItem("user");
+
     setIsLoggedIn(false);
+
     navigate("/");
   };
 
@@ -19,9 +23,11 @@ function Home() {
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const [profile, setProfile] = useState(null);
+
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [listingsError, setListingsError] = useState("");
+
   const [selectedListing, setSelectedListing] = useState(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [detailsError, setDetailsError] = useState("");
@@ -51,6 +57,11 @@ function Home() {
       });
 
       localStorage.setItem("token", response.data.token);
+      localStorage.setItem(
+        "user",
+        JSON.stringify(response.data.user)
+      );
+
       setIsLoggedIn(true);
 
       setMessage(
@@ -66,11 +77,14 @@ function Home() {
   const getProfile = async () => {
     try {
       const response = await API.get("/profile");
+
       setProfile(response.data.user);
+
       setMessage("Protected profile accessed successfully");
     } catch (error) {
       setMessage(
-        error.response?.data?.error || "Profile access failed"
+        error.response?.data?.error ||
+          "Profile access failed"
       );
     }
   };
@@ -82,6 +96,7 @@ function Home() {
 
     try {
       const response = await API.get(`/listings/${id}`);
+
       setSelectedListing(response.data);
     } catch (error) {
       setDetailsError(
@@ -518,3 +533,4 @@ function Home() {
 }
 
 export default Home;
+

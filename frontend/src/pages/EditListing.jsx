@@ -1,10 +1,10 @@
-
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import API from "../api";
 import "../Auth.css";
 
-function Sell() {
+function EditListing() {
+  const { id } = useParams();
   const navigate = useNavigate();
 
   const [title, setTitle] = useState("");
@@ -14,14 +14,39 @@ function Sell() {
   const [imageUrl, setImageUrl] = useState("");
 
   const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const fetchListing = async () => {
+      try {
+        const response = await API.get(`/listings/${id}`);
+
+        const listing = response.data;
+
+        setTitle(listing.title || "");
+        setDescription(listing.description || "");
+        setPrice(listing.price || "");
+        setCategory(listing.category || "");
+        setImageUrl(listing.image_url || "");
+      } catch (error) {
+        setMessage(
+          error.response?.data?.error ||
+            "Failed to load listing."
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchListing();
+  }, [id]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     setMessage("");
 
-    // Simple validation
     if (!title.trim()) {
       setMessage("Title is required.");
       return;
@@ -43,9 +68,9 @@ function Sell() {
     }
 
     try {
-      setLoading(true);
+      setSaving(true);
 
-      const response = await API.post("/listings", {
+      await API.put(`/listings/${id}`, {
         title: title.trim(),
         description: description.trim(),
         price: Number(price),
@@ -53,36 +78,38 @@ function Sell() {
         image_url: imageUrl.trim() || null,
       });
 
-      setMessage(
-        `Listing created successfully! ID: ${response.data.id}`
-      );
-
-      setTitle("");
-      setDescription("");
-      setPrice("");
-      setCategory("");
-      setImageUrl("");
+      setMessage("Listing updated successfully!");
 
       setTimeout(() => {
-        navigate("/");
-      }, 1000);
+        navigate("/my-listings");
+      }, 800);
     } catch (error) {
       setMessage(
         error.response?.data?.error ||
-          "Failed to create listing. Please try again."
+          "Failed to update listing."
       );
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="auth-page">
+        <div className="auth-card">
+          <p className="auth-message">Loading listing...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="auth-page">
       <div className="auth-card">
-        <h1>Sell an Item</h1>
+        <h1>Edit Listing</h1>
 
         <p className="auth-subtitle">
-          Create a listing for your campus community
+          Update your marketplace item
         </p>
 
         <form className="auth-form" onSubmit={handleSubmit}>
@@ -91,7 +118,6 @@ function Sell() {
 
             <input
               type="text"
-              placeholder="e.g. Engineering Mathematics Book"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
             />
@@ -101,7 +127,6 @@ function Sell() {
             <label>Description</label>
 
             <textarea
-              placeholder="Describe your item..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
@@ -114,7 +139,6 @@ function Sell() {
               type="number"
               step="0.01"
               min="0"
-              placeholder="Enter price"
               value={price}
               onChange={(e) => setPrice(e.target.value)}
             />
@@ -125,7 +149,6 @@ function Sell() {
 
             <input
               type="text"
-              placeholder="e.g. Books, Electronics"
               value={category}
               onChange={(e) => setCategory(e.target.value)}
             />
@@ -136,7 +159,6 @@ function Sell() {
 
             <input
               type="text"
-              placeholder="Paste image URL"
               value={imageUrl}
               onChange={(e) => setImageUrl(e.target.value)}
             />
@@ -145,9 +167,9 @@ function Sell() {
           <button
             type="submit"
             className="auth-button"
-            disabled={loading}
+            disabled={saving}
           >
-            {loading ? "Creating..." : "Create Listing"}
+            {saving ? "Saving..." : "Save Changes"}
           </button>
         </form>
 
@@ -158,21 +180,23 @@ function Sell() {
         )}
 
         <p className="auth-footer">
-          Want to go back?{" "}
-          <a
-            href="/"
-            onClick={(e) => {
-              e.preventDefault();
-              navigate("/");
+          <button
+            type="button"
+            onClick={() => navigate("/my-listings")}
+            style={{
+              background: "none",
+              border: "none",
+              color: "#0d47a1",
+              cursor: "pointer",
+              fontSize: "14px",
             }}
           >
-            Back to Marketplace
-          </a>
+            Back to My Listings
+          </button>
         </p>
       </div>
     </div>
   );
 }
 
-export default Sell;
-
+export default EditListing;
