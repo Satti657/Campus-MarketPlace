@@ -44,7 +44,8 @@ app.get("/listings", async (req, res) => {
         listings.category,
         listings.image_url,
         users.name AS seller_name,
-        users.email AS seller_email
+        users.email AS seller_email,
+        users.phone AS seller_phone
        FROM listings
        JOIN users
          ON listings.user_id = users.id
@@ -78,7 +79,8 @@ app.get("/listings/:id", async (req, res) => {
         listings.category,
         listings.image_url,
         users.name AS seller_name,
-        users.email AS seller_email
+        users.email AS seller_email,      
+        users.phone AS seller_phone
        FROM listings
        JOIN users
          ON listings.user_id = users.id
@@ -246,11 +248,16 @@ app.delete("/listings/:id", authMiddleware, async (req, res) => {
 // SIGNUP
 // =========================
 
+           // =========================
+// SIGNUP
+// =========================
+
 app.post("/signup", async (req, res) => {
   try {
     const {
       name,
       email,
+      phone,
       password,
     } = req.body;
 
@@ -272,12 +279,13 @@ app.post("/signup", async (req, res) => {
 
     const result = await pool.query(
       `INSERT INTO users
-        (name, email, password)
-       VALUES ($1, $2, $3)
-       RETURNING id, name, email`,
+        (name, email, phone, password)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id, name, email, phone`,
       [
         name,
         email,
+        phone,
         passwordHash,
       ]
     );
@@ -292,7 +300,6 @@ app.post("/signup", async (req, res) => {
     });
   }
 });
-
 // =========================
 // LOGIN
 // JWT GENERATION

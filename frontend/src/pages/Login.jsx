@@ -1,7 +1,7 @@
-
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import API from "../api";
+import "../Auth.css";
 
 function Login() {
   const navigate = useNavigate();
@@ -28,47 +28,62 @@ function Login() {
       }, 500);
     } catch (error) {
       setMessage(
-        error.response?.data?.error || "Login failed. Please try again."
+        error.response?.data?.error ||
+          "Login failed. Please try again."
       );
     }
   };
 
   return (
-    <div>
-      <h1>Login</h1>
+    <div className="auth-page">
+      <div className="auth-card">
+        <h1>Welcome Back</h1>
 
-      <form onSubmit={handleLogin}>
-        <div>
-          <label>Email</label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-        </div>
+        <p className="auth-subtitle">
+          Login to your Campus Marketplace account
+        </p>
 
-        <div>
-          <label>Password</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-        </div>
+        <form className="auth-form" onSubmit={handleLogin}>
+          <div className="auth-field">
+            <label>Email</label>
+            <input
+              type="email"
+              placeholder="Enter your email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </div>
 
-        <button type="submit">Login</button>
-      </form>
+          <div className="auth-field">
+            <label>Password</label>
+            <input
+              type="password"
+              placeholder="Enter your password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </div>
 
-      {message && <p>{message}</p>}
+          <button type="submit" className="auth-button">
+            Login
+          </button>
+        </form>
 
-      <p>
-        Don't have an account? <Link to="/signup">Sign up</Link>
-      </p>
+        {message && (
+          <p className="auth-message">
+            {message}
+          </p>
+        )}
+
+        <p className="auth-footer">
+          Don't have an account?{" "}
+          <Link to="/signup">Create an account</Link>
+        </p>
+      </div>
     </div>
   );
 }
 
 export default Login;
-

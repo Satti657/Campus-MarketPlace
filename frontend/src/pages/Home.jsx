@@ -1,32 +1,27 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-
 import API from "../api";
 
-
 function Home() {
+  const navigate = useNavigate();
 
-    const navigate = useNavigate();
+  const [isLoggedIn, setIsLoggedIn] = useState(
+    !!localStorage.getItem("token")
+  );
 
-const [isLoggedIn, setIsLoggedIn] = useState(
-  !!localStorage.getItem("token")
-);
-
-const handleLogout = () => {
-  localStorage.removeItem("token");
-  setIsLoggedIn(false);
-  navigate("/");
-};
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    setIsLoggedIn(false);
+    navigate("/");
+  };
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const [profile, setProfile] = useState(null);
-
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [listingsError, setListingsError] = useState("");
-
   const [selectedListing, setSelectedListing] = useState(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [detailsError, setDetailsError] = useState("");
@@ -56,6 +51,7 @@ const handleLogout = () => {
       });
 
       localStorage.setItem("token", response.data.token);
+      setIsLoggedIn(true);
 
       setMessage(
         `Login successful! Welcome ${response.data.user.name}`
@@ -70,9 +66,7 @@ const handleLogout = () => {
   const getProfile = async () => {
     try {
       const response = await API.get("/profile");
-
       setProfile(response.data.user);
-
       setMessage("Protected profile accessed successfully");
     } catch (error) {
       setMessage(
@@ -88,7 +82,6 @@ const handleLogout = () => {
 
     try {
       const response = await API.get(`/listings/${id}`);
-
       setSelectedListing(response.data);
     } catch (error) {
       setDetailsError(
@@ -115,7 +108,6 @@ const handleLogout = () => {
 
   return (
     <div className="app">
-
       {/* Navbar */}
       <nav className="navbar">
         <div className="logo">
@@ -149,24 +141,26 @@ const handleLogout = () => {
         </div>
 
         {isLoggedIn ? (
-  <>
-    <Link to="/sell" className="nav-login">
-      Sell
-    </Link>
+          <>
+            <Link to="/sell" className="nav-login">
+              Sell
+            </Link>
 
-    <button className="nav-login" onClick={handleLogout}>
-      Logout
-    </button>
-  </>
-) : (
-  <Link to="/login" className="nav-login">
-    Login
-  </Link>
-)}
+            <button
+              className="nav-login"
+              onClick={handleLogout}
+            >
+              Logout
+            </button>
+          </>
+        ) : (
+          <Link to="/login" className="nav-login">
+            Login
+          </Link>
+        )}
       </nav>
 
       <main className="main-container">
-
         {/* Hero Section */}
         <section className="hero-section">
           <p className="small-heading">
@@ -267,7 +261,6 @@ const handleLogout = () => {
         {/* Listing Details */}
         {selectedListing ? (
           <section className="listing-details-section">
-
             <button
               className="back-button"
               onClick={backToListings}
@@ -276,7 +269,6 @@ const handleLogout = () => {
             </button>
 
             <div className="listing-details-card">
-
               <div className="details-image">
                 {selectedListing.image_url ? (
                   <img
@@ -291,7 +283,6 @@ const handleLogout = () => {
               </div>
 
               <div className="details-content">
-
                 <p className="small-heading">
                   LISTING DETAILS
                 </p>
@@ -320,13 +311,11 @@ const handleLogout = () => {
                 </p>
 
                 <div className="seller-card">
-
                   <h3>
                     Seller Information
                   </h3>
 
                   <div className="seller-info">
-
                     <div className="seller-avatar">
                       {selectedListing.seller_name
                         ?.charAt(0)
@@ -341,37 +330,25 @@ const handleLogout = () => {
                       <p className="seller-email">
                         {selectedListing.seller_email}
                       </p>
+
+                      <p className="seller-email">
+                        Phone:{" "}
+                        {selectedListing.seller_phone ||
+                          "Not provided"}
+                      </p>
                     </div>
-
                   </div>
-
-                  {/* Contact Seller */}
-                  <a
-                    className="contact-seller-button"
-                    href={`mailto:${selectedListing.seller_email}?subject=Interested in ${encodeURIComponent(
-                      selectedListing.title
-                    )}`}
-                  >
-                    ✉️ Contact Seller
-                  </a>
-
                 </div>
-
               </div>
-
             </div>
-
           </section>
         ) : (
-
           /* Listings Section */
           <section
             className="listings-section"
             id="marketplace"
           >
-
             <div className="listings-header">
-
               <p className="small-heading">
                 CAMPUS MARKETPLACE
               </p>
@@ -383,7 +360,6 @@ const handleLogout = () => {
               <p>
                 Discover items available from your campus community.
               </p>
-
             </div>
 
             {/* Loading */}
@@ -413,19 +389,16 @@ const handleLogout = () => {
             {!loading &&
               !listingsError &&
               listings.length > 0 && (
-
                 <div className="listings-grid">
-
                   {listings.map((listing) => (
-
                     <div
                       className="listing-card"
                       key={listing.id}
-                      onClick={() => viewListing(listing.id)}
+                      onClick={() =>
+                        viewListing(listing.id)
+                      }
                     >
-
                       <div className="listing-image">
-
                         {listing.image_url ? (
                           <img
                             src={listing.image_url}
@@ -436,11 +409,9 @@ const handleLogout = () => {
                             📷 No Photo
                           </span>
                         )}
-
                       </div>
 
                       <div className="listing-content">
-
                         <h3>
                           {listing.title}
                         </h3>
@@ -462,30 +433,20 @@ const handleLogout = () => {
                         >
                           View Details →
                         </button>
-
                       </div>
-
                     </div>
-
                   ))}
-
                 </div>
-
               )}
-
           </section>
         )}
-
       </main>
 
       {/* Profile Section */}
       {profile && (
         <section className="profile-section">
-
           <div className="profile-card">
-
             <div className="profile-header">
-
               <div className="profile-avatar">
                 {profile.name
                   .charAt(0)
@@ -501,11 +462,9 @@ const handleLogout = () => {
                   {profile.name}
                 </h2>
               </div>
-
             </div>
 
             <div className="profile-info">
-
               <div className="info-item">
                 <span>ID</span>
                 <strong>{profile.id}</strong>
@@ -520,11 +479,8 @@ const handleLogout = () => {
                 <span>Email</span>
                 <strong>{profile.email}</strong>
               </div>
-
             </div>
-
           </div>
-
         </section>
       )}
 
@@ -543,14 +499,12 @@ const handleLogout = () => {
 
       {/* Profile Button */}
       <div className="profile-button-container">
-
         <button
           onClick={getProfile}
           className="profile-button"
         >
           🔐 Get My Profile
         </button>
-
       </div>
 
       {/* Footer */}
@@ -559,7 +513,6 @@ const handleLogout = () => {
           © 2026 Campus Marketplace · Built for Students
         </p>
       </footer>
-
     </div>
   );
 }
