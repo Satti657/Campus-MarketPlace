@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import API from "../api";
@@ -159,6 +158,10 @@ function Home() {
           <>
             <Link to="/sell" className="nav-login">
               Sell
+            </Link>
+
+            <Link to="/my-listings" className="nav-login">
+              My Listings
             </Link>
 
             <button
@@ -377,21 +380,18 @@ function Home() {
               </p>
             </div>
 
-            {/* Loading */}
             {loading && (
               <p className="listing-status">
                 Loading listings...
               </p>
             )}
 
-            {/* Error */}
             {listingsError && (
               <p className="listing-error">
                 {listingsError}
               </p>
             )}
 
-            {/* Empty */}
             {!loading &&
               !listingsError &&
               listings.length === 0 && (
@@ -400,7 +400,6 @@ function Home() {
                 </p>
               )}
 
-            {/* Listings */}
             {!loading &&
               !listingsError &&
               listings.length > 0 && (
@@ -533,4 +532,3 @@ function Home() {
 }
 
 export default Home;
-
