@@ -3,8 +3,9 @@ const cors = require("cors");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const { Pool } = require("pg");
+const multer = require("multer");
+const { v2: cloudinary } = require("cloudinary");
 require("dotenv").config();
-
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -12,6 +13,16 @@ const authMiddleware = require("./authMiddleware");
 
 app.use(cors());
 app.use(express.json());
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+const upload = multer({
+  dest: "uploads/",
+});
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -107,43 +118,58 @@ app.get("/listings/:id", async (req, res) => {
 // PROTECTED
 // =========================
 
-app.post("/listings", authMiddleware, async (req, res) => {
-  try {
-    const {
-      title,
-      description,
-      price,
-      category,
-      image_url,
-    } = req.body;
-
-    const result = await pool.query(
-      `INSERT INTO listings
-        (user_id, title, description, price, category, image_url)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING *`,
-      [
-        req.user.id,
+app.post(
+  "/listings",
+  authMiddleware,
+  upload.single("image"),
+  async (req, res) => {
+    try {
+      const {
         title,
         description,
         price,
         category,
-        image_url || null,
-      ]
-    );
+      } = req.body;
 
-    res.status(201).json(result.rows[0]);
-  } catch (err) {
-    res.status(500).json({
-      error: err.message,
-    });
+      let imageUrl = null;
+
+      // Upload image to Cloudinary if an image was selected
+      if (req.file) {
+        const result = await cloudinary.uploader.upload(
+          req.file.path,
+          {
+            folder: "campus-marketplace",
+          }
+        );
+
+        imageUrl = result.secure_url;
+      }
+
+      const result = await pool.query(
+        `INSERT INTO listings
+          (user_id, title, description, price, category, image_url)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         RETURNING *`,
+        [
+          req.user.id,
+          title,
+          description,
+          price,
+          category,
+          imageUrl,
+        ]
+      );
+
+      res.status(201).json(result.rows[0]);
+    } catch (err) {
+      console.error(err);
+
+      res.status(500).json({
+        error: err.message,
+      });
+    }
   }
-});
-
-// =========================
-// UPDATE LISTING
-// PROTECTED + OWNER ONLY
-// =========================
+);
 
 app.put("/listings/:id", authMiddleware, async (req, res) => {
   try {
@@ -248,9 +274,7 @@ app.delete("/listings/:id", authMiddleware, async (req, res) => {
 // SIGNUP
 // =========================
 
-           // =========================
-// SIGNUP
-// =========================
+  
 
 app.post("/signup", async (req, res) => {
   try {

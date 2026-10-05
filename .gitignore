@@ -10,3 +10,8 @@ npm-debug.log*
 # OS files
 .DS_Store
 Thumbs.db
+
+# Upload test and temporary files
+upload-test/
+uploads/
+git

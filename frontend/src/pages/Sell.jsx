@@ -11,7 +11,7 @@ function Sell() {
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
   const [category, setCategory] = useState("");
-  const [imageUrl, setImageUrl] = useState("");
+  const [image, setImage] = useState(null);
 
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
@@ -45,13 +45,18 @@ function Sell() {
     try {
       setLoading(true);
 
-      const response = await API.post("/listings", {
-        title: title.trim(),
-        description: description.trim(),
-        price: Number(price),
-        category: category.trim(),
-        image_url: imageUrl.trim() || null,
-      });
+      const formData = new FormData();
+
+      formData.append("title", title.trim());
+      formData.append("description", description.trim());
+      formData.append("price", Number(price));
+      formData.append("category", category.trim());
+
+      if (image) {
+        formData.append("image", image);
+      }
+
+      const response = await API.post("/listings", formData);
 
       setMessage(
         `Listing created successfully! ID: ${response.data.id}`
@@ -61,7 +66,10 @@ function Sell() {
       setDescription("");
       setPrice("");
       setCategory("");
-      setImageUrl("");
+      setImage(null);
+
+      // Reset file input
+      document.getElementById("image").value = "";
 
       setTimeout(() => {
         navigate("/");
@@ -132,13 +140,13 @@ function Sell() {
           </div>
 
           <div className="auth-field">
-            <label>Image URL (optional)</label>
+            <label>Image (optional)</label>
 
             <input
-              type="text"
-              placeholder="Paste image URL"
-              value={imageUrl}
-              onChange={(e) => setImageUrl(e.target.value)}
+              id="image"
+              type="file"
+              accept="image/*"
+              onChange={(e) => setImage(e.target.files[0])}
             />
           </div>
 

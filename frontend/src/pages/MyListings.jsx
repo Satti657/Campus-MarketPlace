@@ -106,6 +106,36 @@ function MyListings() {
             className="my-listing-card"
             key={listing.id}
           >
+            {listing.image_url ? (
+              <img
+                src={listing.image_url}
+                alt={listing.title}
+                style={{
+                  width: "100%",
+                  height: "190px",
+                  objectFit: "cover",
+                  borderRadius: "8px",
+                  marginBottom: "15px",
+                }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: "100%",
+                  height: "190px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  background: "#eff6ff",
+                  color: "#64748b",
+                  borderRadius: "8px",
+                  marginBottom: "15px",
+                }}
+              >
+                📷 No Photo
+              </div>
+            )}
+
             <h2>{listing.title}</h2>
 
             <p className="my-listing-description">
@@ -162,3 +192,4 @@ function MyListings() {
 }
 
 export default MyListings;
+
